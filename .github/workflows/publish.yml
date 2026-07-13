@@ -1,0 +1,71 @@
+name: Test and stage npm release
+
+on:
+  push:
+  pull_request:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Linux x64
+            os: ubuntu-latest
+          - name: macOS x64
+            os: macos-13
+          - name: macOS arm64
+            os: macos-14
+          - name: Windows x64
+            os: windows-latest
+          - name: Windows arm64
+            os: windows-11-arm
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.19.0
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - name: Load native runtimes
+        run: node --input-type=module -e "await import('@picovoice/pvrecorder-node'); await import('@huggingface/transformers')"
+      - run: npm pack --dry-run --json
+
+  publish:
+    name: Stage npm package
+    if: github.event_name == 'release'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 22.19.0
+          registry-url: https://registry.npmjs.org
+          cache: npm
+      - name: Install npm staged-publishing support
+        run: npm install --global npm@11.15.0
+      - run: npm ci
+      - name: Verify release version
+        run: node -e "const p=require('./package.json'); if ('v'+p.version !== process.env.GITHUB_REF_NAME) throw new Error('Release tag must be v'+p.version)"
+      - name: Stage prerelease on npm
+        if: github.event.release.prerelease
+        run: npm stage publish --provenance --access public --tag next
+      - name: Stage release on npm
+        if: github.event.release.prerelease == false
+        run: npm stage publish --provenance --access public

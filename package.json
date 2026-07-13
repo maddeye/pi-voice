@@ -1,0 +1,57 @@
+{
+  "name": "@maddeye/pi-voice",
+  "version": "1.0.0",
+  "description": "Private, cross-platform voice prompt input for pi using local Whisper",
+  "license": "MIT",
+  "author": "maddeye",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/maddeye/pi-voice.git"
+  },
+  "homepage": "https://github.com/maddeye/pi-voice#readme",
+  "bugs": {
+    "url": "https://github.com/maddeye/pi-voice/issues"
+  },
+  "keywords": [
+    "pi-package",
+    "voice",
+    "whisper",
+    "speech-to-text",
+    "local-first"
+  ],
+  "type": "module",
+  "files": [
+    "extensions",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "pi": {
+    "extensions": [
+      "./extensions/voice.ts"
+    ]
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.2.0",
+    "@picovoice/pvrecorder-node": "1.2.9"
+  },
+  "peerDependencies": {
+    "@earendil-works/pi-coding-agent": ">=0.80.6",
+    "@earendil-works/pi-tui": ">=0.80.6"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "npm run test && npm run typecheck",
+    "prepack": "npm run check"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
