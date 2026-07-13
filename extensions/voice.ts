@@ -93,6 +93,11 @@ export function pcmToFloat32(frames: Int16Array[]): Float32Array {
   return audio;
 }
 
+export function waveformBar(frame: Int16Array): string {
+  const rms = Math.sqrt(frame.reduce((sum, sample) => sum + sample * sample, 0) / frame.length) / 32768;
+  return rms <= 0.002 ? "·" : "▁▂▃▄▅▆▇█"[Math.min(7, Math.floor(rms * 400))];
+}
+
 async function loadConfig(): Promise<VoiceConfig> {
   try {
     const raw = JSON.parse(await readFile(CONFIG_PATH, "utf8"));
@@ -160,6 +165,7 @@ async function record(ctx: ExtensionContext, config: VoiceConfig): Promise<Float
 
   const recorder = new PvRecorder(512, deviceIndex);
   const frames: Int16Array[] = [];
+  const waveform = Array(15).fill("·") as string[];
   let capturing = true;
   let captureFailure: unknown;
   let cleanupFailure: unknown;
@@ -176,7 +182,12 @@ async function record(ctx: ExtensionContext, config: VoiceConfig): Promise<Float
     recorder.start();
     capture = (async () => {
       try {
-        while (capturing && frames.length * recorder.frameLength < maxSamples) frames.push(await recorder.read());
+        while (capturing && frames.length * recorder.frameLength < maxSamples) {
+          const frame = await recorder.read();
+          frames.push(frame);
+          waveform.push(waveformBar(frame));
+          waveform.shift();
+        }
         if (capturing) finish(true);
       } catch (error) {
         if (capturing) {
@@ -194,7 +205,7 @@ async function record(ctx: ExtensionContext, config: VoiceConfig): Promise<Float
         render(width: number) {
           const seconds = ((Date.now() - started) / 1000).toFixed(1);
           return [
-            truncateToWidth(theme.fg("error", theme.bold(`● Recording ${seconds}s`)), width),
+            truncateToWidth(theme.fg("error", theme.bold(`${waveform.join("")} ${seconds}s`)), width),
             truncateToWidth(theme.fg("dim", "Enter stop and transcribe • Esc cancel"), width),
           ];
         },
