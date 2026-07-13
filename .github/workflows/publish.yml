@@ -2,15 +2,15 @@ name: Test and stage npm release
 
 on:
   push:
-  pull_request:
-  release:
-    types: [published]
+    branches: [main]
+    tags: ["v*"]
 
 permissions:
   contents: read
 
 jobs:
   test:
+    if: github.ref == 'refs/heads/main'
     name: ${{ matrix.name }}
     strategy:
       fail-fast: false
@@ -43,8 +43,7 @@ jobs:
 
   publish:
     name: Stage npm package
-    if: github.event_name == 'release'
-    needs: test
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,11 +60,11 @@ jobs:
       - name: Install npm staged-publishing support
         run: npm install --global npm@11.15.0
       - run: npm ci
-      - name: Verify release version
-        run: node -e "const p=require('./package.json'); if ('v'+p.version !== process.env.GITHUB_REF_NAME) throw new Error('Release tag must be v'+p.version)"
+      - name: Verify tag version
+        run: node -e "const p=require('./package.json'); if ('v'+p.version !== process.env.GITHUB_REF_NAME) throw new Error('Tag must be v'+p.version)"
       - name: Stage prerelease on npm
-        if: github.event.release.prerelease
+        if: contains(github.ref_name, '-')
         run: npm stage publish --provenance --access public --tag next
       - name: Stage release on npm
-        if: github.event.release.prerelease == false
+        if: ${{ !contains(github.ref_name, '-') }}
         run: npm stage publish --provenance --access public

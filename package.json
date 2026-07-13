@@ -1,6 +1,6 @@
 {
   "name": "@maddeye/pi-voice",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Private, cross-platform voice prompt input for pi using local Whisper",
   "license": "MIT",
   "author": "maddeye",
